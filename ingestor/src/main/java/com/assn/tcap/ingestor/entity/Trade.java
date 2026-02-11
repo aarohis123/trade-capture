@@ -23,16 +23,16 @@ public class Trade {
     @Column(nullable = false)
     private Long version;
 
-    @Column(name = "counter_party_id", nullable = false)
+    @Column(name = "counter_party_id")
     private String counterPartyId;
 
-    @Column(name = "book_id", nullable = false)
+    @Column(name = "book_id")
     private String bookId;
 
     @Column(name = "maturity_date", nullable = false)
     private LocalDate maturityDate;
 
-    @Column(name = "created_date", nullable = false)
+    @Column(name = "created_date")
     private LocalDate createdDate;
 
     @Column(nullable = false)

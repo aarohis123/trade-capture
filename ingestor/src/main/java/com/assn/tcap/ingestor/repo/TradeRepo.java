@@ -2,10 +2,12 @@ package com.assn.tcap.ingestor.repo;
 
 import com.assn.tcap.ingestor.entity.Trade;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -22,12 +24,7 @@ public interface TradeRepo extends JpaRepository<Trade, Long> {
        """)
     List<Trade> findLatestTradesByTradeIds(@Param("tradeIds") List<Long> tradeIds);
 
-    @Query("""
-       SELECT COUNT(t) > 0
-       FROM Trade t
-       WHERE t.tradeId = :tradeId
-       AND t.version > :version
-       """)
-    boolean existsHigherVersion(@Param("tradeId") Long tradeId,
-                                @Param("version") Long version);
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Trade t SET t.expired = 'Y' WHERE t.maturityDate < :today and t.expired = 'N'")
+    int expireTrades(@Param("today") LocalDate today);
 }

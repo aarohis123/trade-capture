@@ -1,7 +1,6 @@
 package com.assn.tcap.ingestor.repo;
 
 import com.assn.tcap.ingestor.entity.Trade;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -30,12 +29,24 @@ class TradeRepoTest {
                 .build();
     }
 
+    private Trade buildTrade(Long tradeId, Long version,LocalDate maturityDate, String expired) {
+        return Trade.builder()
+                .tradeId(tradeId)
+                .version(version)
+                .counterPartyId("CP1")
+                .bookId("BOOK1")
+                .maturityDate(maturityDate)
+                .createdDate(LocalDate.now())
+                .expired(expired)
+                .tradeKey(tradeId + "-" + version)
+                .build();
+    }
+
     // ==============================
     // findLatestTradesByTradeIds()
     // ==============================
 
     @Test
-    @DisplayName("Should return latest version per tradeId")
     void givenMultipleVersions_whenFindLatestTrades_thenOnlyMaxVersionReturned() {
 
         tradeRepo.save(buildTrade(1L, 1L));
@@ -50,7 +61,6 @@ class TradeRepoTest {
     }
 
     @Test
-    @DisplayName("Should return latest trades for multiple tradeIds")
     void givenMultipleTradeIds_whenFindLatestTrades_thenReturnLatestForEach() {
 
         tradeRepo.save(buildTrade(1L, 1L));
@@ -68,7 +78,6 @@ class TradeRepoTest {
     }
 
     @Test
-    @DisplayName("Should return empty list when tradeId not found")
     void givenNonExistingTradeId_whenFindLatestTrades_thenReturnEmpty() {
 
         List<Trade> result =
@@ -78,7 +87,6 @@ class TradeRepoTest {
     }
 
     @Test
-    @DisplayName("Should return empty list when input list is empty")
     void givenEmptyList_whenFindLatestTrades_thenReturnEmpty() {
 
         List<Trade> result =
@@ -87,41 +95,76 @@ class TradeRepoTest {
         assertThat(result).isEmpty();
     }
 
-    // ==============================
-    // existsHigherVersion()
-    // ==============================
+
+
+    // =====================================================
+    // expireTrades() - POSITIVE TESTS
+    // =====================================================
 
     @Test
-    @DisplayName("Should return true when higher version exists")
-    void givenHigherVersionExists_whenCheckExistsHigherVersion_thenReturnTrue() {
+    void givenExpiredMaturityDates_whenExpireTrades_thenTradesMarkedExpired() throws Exception {
 
-        tradeRepo.save(buildTrade(1L, 5L));
+        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(5), "N"));
+        tradeRepo.save(buildTrade(2L, 1L, LocalDate.now().plusDays(5), "N"));
+        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
 
-        boolean exists =
-                tradeRepo.existsHigherVersion(1L, 2L);
+        assertThat(updatedCount).isEqualTo(1);
 
-        assertThat(exists).isTrue();
+        List<Trade> allTrades = tradeRepo.findAll();
+
+        Trade expiredTrade = allTrades.stream()
+                .filter(t -> t.getTradeId().equals(1L))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(expiredTrade.getExpired()).isEqualTo("Y");
     }
 
     @Test
-    @DisplayName("Should return false when no higher version exists")
-    void givenNoHigherVersion_whenCheckExistsHigherVersion_thenReturnFalse() {
+    void givenAlreadyExpiredTrades_whenExpireTrades_thenDoNotUpdateAgain() {
 
-        tradeRepo.save(buildTrade(1L, 2L));
+        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(5), "Y"));
 
-        boolean exists =
-                tradeRepo.existsHigherVersion(1L, 5L);
+        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
 
-        assertThat(exists).isFalse();
+        assertThat(updatedCount).isZero();
     }
 
     @Test
-    @DisplayName("Should return false when tradeId does not exist")
-    void givenNonExistingTradeId_whenCheckExistsHigherVersion_thenReturnFalse() {
+    void givenMaturityDateEqualsToday_whenExpireTrades_thenDoNotExpire() {
 
-        boolean exists =
-                tradeRepo.existsHigherVersion(999L, 1L);
+        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now(), "N"));
 
-        assertThat(exists).isFalse();
+        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
+
+        assertThat(updatedCount).isZero();
     }
+
+    // =====================================================
+    // expireTrades() - NEGATIVE / EDGE TESTS
+    // =====================================================
+
+    @Test
+    void givenNoEligibleTrades_whenExpireTrades_thenReturnZero() {
+
+        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now().plusDays(10), "N"));
+
+        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
+
+        assertThat(updatedCount).isZero();
+    }
+
+    @Test
+    void givenMultipleExpiredTrades_whenExpireTrades_thenReturnCorrectUpdateCount() {
+
+        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(2), "N"));
+        tradeRepo.save(buildTrade(2L, 1L, LocalDate.now().minusDays(3), "N"));
+        tradeRepo.save(buildTrade(3L, 1L, LocalDate.now().plusDays(3), "N"));
+
+        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
+
+        assertThat(updatedCount).isEqualTo(2);
+    }
+
+
 }
