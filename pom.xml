@@ -58,6 +58,13 @@
                 <version>${spring-boot-version}</version>
             </dependency>
 
+            <!-- KAFKA -->
+            <dependency>
+                <groupId>org.springframework.kafka</groupId>
+                <artifactId>spring-kafka</artifactId>
+                <version>${spring-boot-version}</version>
+            </dependency>
+
             <!-- utilities -->
             <dependency>
                 <groupId>org.projectlombok</groupId>
