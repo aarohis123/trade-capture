@@ -27,6 +27,7 @@
         <lombok.version>1.18.42</lombok.version>
         <modelmapper.version>3.2.6</modelmapper.version>
         <modelmaper-module-record.version>1.0.1</modelmaper-module-record.version>
+        <lz4-java-version>1.10.3</lz4-java-version>
         <h2.version>2.4.240</h2.version>
         <mockito-junit-jupiter-version>5.21.0</mockito-junit-jupiter-version>
         <jacoco-maven-plugin-version>0.8.14</jacoco-maven-plugin-version>
@@ -71,9 +72,10 @@
                 </exclusions>
             </dependency>
             <dependency>
-                <groupId>org.lz4</groupId>
+                <groupId>at.yawk.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.8.1</version>
+                <version>${lz4-java-version}</version>
+                <scope>compile</scope>
             </dependency>
 
             <!-- utilities -->
