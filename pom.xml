@@ -16,18 +16,20 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.2</version>
+        <version>3.5.10</version>
+        <relativePath/>
     </parent>
 
     <properties>
         <maven.compiler.source>23</maven.compiler.source>
         <maven.compiler.target>23</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot-version>4.0.2</spring-boot-version>
+        <spring-boot-version>3.5.10</spring-boot-version>
+        <spring-kafka-version>3.3.12</spring-kafka-version>
         <lombok.version>1.18.42</lombok.version>
         <modelmapper.version>3.2.6</modelmapper.version>
         <modelmaper-module-record.version>1.0.1</modelmaper-module-record.version>
-        <lz4-java-version>1.10.3</lz4-java-version>
+        <jackson-databind-version>3.0.4</jackson-databind-version>
         <h2.version>2.4.240</h2.version>
         <mockito-junit-jupiter-version>5.21.0</mockito-junit-jupiter-version>
         <jacoco-maven-plugin-version>0.8.14</jacoco-maven-plugin-version>
@@ -63,19 +65,7 @@
             <dependency>
                 <groupId>org.springframework.kafka</groupId>
                 <artifactId>spring-kafka</artifactId>
-                <version>${spring-boot-version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.lz4</groupId>
-                        <artifactId>lz4-java</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>at.yawk.lz4</groupId>
-                <artifactId>lz4-java</artifactId>
-                <version>${lz4-java-version}</version>
-                <scope>compile</scope>
+                <version>${spring-kafka-version}</version>
             </dependency>
 
             <!-- utilities -->
@@ -103,18 +93,19 @@
 
             <!-- Test -->
             <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-test</artifactId>
-                <version>${spring-boot-version}</version>
+                <groupId>org.springframework.kafka</groupId>
+                <artifactId>spring-kafka-test</artifactId>
+                <version>${spring-kafka-version}</version>
                 <scope>test</scope>
             </dependency>
+
+
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-data-jpa-test</artifactId>
                 <version>${spring-boot-version}</version>
                 <scope>test</scope>
             </dependency>
-
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-junit-jupiter</artifactId>
@@ -157,9 +148,9 @@
                     </execution>
                     <execution>
                         <id>report</id>
-                        <phase>verify</phase>
+                        <phase>test</phase>
                         <goals>
-                            <goal>report-aggregate</goal>
+                            <goal>report</goal>
                         </goals>
                     </execution>
                 </executions>

@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.record.RecordModule;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -30,60 +31,88 @@ public class TradeService {
     }
 
     public List<RejectedTradeDTO> processTrades(List<TradeDTO> incomingTrades) {
-        if (null == incomingTrades || incomingTrades.isEmpty()) {
+
+        if (incomingTrades == null || incomingTrades.isEmpty()) {
             return Collections.emptyList();
         }
+
         LocalDate today = LocalDate.now();
 
+        // Maintain order & keep highest version per tradeId in this batch
+        Map<Long, TradeDTO> highestVersionInBatch = new LinkedHashMap<>();
+        List<RejectedTradeDTO> rejectedTrades = new ArrayList<>();
+
+        for (TradeDTO trade : incomingTrades) {
+
+            if (trade.getMaturityDate().isBefore(today)) {
+                rejectedTrades.add(
+                        getRejectedTrade(trade,
+                                "Maturity date expired: " + trade.getMaturityDate()));
+                continue;
+            }
+
+            TradeDTO existing = highestVersionInBatch.get(trade.getTradeId());
+
+            if (existing == null) {
+                highestVersionInBatch.put(trade.getTradeId(), trade);
+            } else {
+                if (trade.getVersion() >= existing.getVersion()) {
+                    highestVersionInBatch.put(trade.getTradeId(), trade);
+                } else {
+                    rejectedTrades.add(
+                            getRejectedTrade(trade,
+                                    "Lower version in same batch: " + trade.getVersion()));
+                }
+            }
+        }
+
+        // Fetch latest trades from DB only for valid batch entries
         Map<Long, Trade> existingTrades = tradeRepo
-                .findLatestTradesByTradeIds(
-                        incomingTrades.stream()
-                                .map(TradeDTO::getTradeId)
-                                .toList()
-                )
+                .findLatestTradesByTradeIds(highestVersionInBatch.keySet())
                 .stream()
                 .collect(Collectors.toMap(Trade::getTradeId, t -> t));
 
         List<Trade> tradesToSave = new ArrayList<>();
-        List<RejectedTradeDTO> rejectedTrades = new ArrayList<>();
 
-        for (TradeDTO incomingTradeDTO : incomingTrades) {
+        for (TradeDTO tradeDTO : highestVersionInBatch.values()) {
 
             try {
 
-                // 🔴 Validation 2: Maturity date must not be in past
-                if (incomingTradeDTO.getMaturityDate().isBefore(today)) {
-                    rejectedTrades.add(getRejectedTrade(incomingTradeDTO, String.format("Maturity date expired: %s", incomingTradeDTO.getMaturityDate())));
-                    log.error("REJECTED TRADE: Maturity date expired: {}", incomingTradeDTO);
+                Trade existing = existingTrades.get(tradeDTO.getTradeId());
+
+                if (existing != null && tradeDTO.getVersion() < existing.getVersion()) {
+                    rejectedTrades.add(
+                            getRejectedTrade(tradeDTO,
+                                    "Lower version than DB: " + tradeDTO.getVersion()));
                     continue;
                 }
 
-                Trade existing = existingTrades.get(incomingTradeDTO.getTradeId());
-                Trade tradeToSave = null;
-                if (existing != null && incomingTradeDTO.getVersion() < existing.getVersion()) {
-                    // 🔴 Validation 1: Reject lower version
-                    rejectedTrades.add(getRejectedTrade(incomingTradeDTO, String.format("Lower version received: %d", incomingTradeDTO.getVersion())));
-                    log.error("REJECTED TRADE: Lower version received: {}", incomingTradeDTO);
-                } else if (existing != null && Objects.equals(existing.getVersion(), incomingTradeDTO.getVersion())) {
-                    tradeToSave = mapper.map(incomingTradeDTO, Trade.class);
-                    tradeToSave.setId(existing.getId());
-                } else {
-                    // New trade
-                    tradeToSave = mapper.map(incomingTradeDTO, Trade.class);
+                Trade tradeToSave = mapper.map(tradeDTO, Trade.class);
+
+                if (existing != null &&
+                        Objects.equals(existing.getVersion(), tradeDTO.getVersion())) {
+
+                    tradeToSave.setId(existing.getId()); // Replace
                 }
 
-                if (null != tradeToSave) {
-                    tradeToSave.setCreatedDate(today);
-                    tradeToSave.setExpired("N");
-                    tradeToSave.setTradeKey(incomingTradeDTO.tradeKey());
-                    tradesToSave.add(tradeToSave);
-                }
+                tradeToSave.setCreatedDate(today);
+                tradeToSave.setExpired("N");
+                tradesToSave.add(tradeToSave);
+
             } catch (Exception e) {
-                log.error("ERROR: Error parsing trade: {}", incomingTradeDTO);
-                rejectedTrades.add(getRejectedTrade(incomingTradeDTO, String.format("%s: Error parsing trade: %s", e.getMessage(), incomingTradeDTO.toString())));
+
+                rejectedTrades.add(
+                        getRejectedTrade(tradeDTO,
+                                "Processing error: " + e.getMessage()));
             }
         }
-        tradeRepo.saveAll(tradesToSave);
+
+        try {
+            tradeRepo.saveAll(tradesToSave);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            log.error("Optimistic locking failure: {}", e.getMessage());
+            throw e;
+        }
         return rejectedTrades;
     }
 

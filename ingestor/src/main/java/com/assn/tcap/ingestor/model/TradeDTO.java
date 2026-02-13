@@ -22,8 +22,4 @@ public class TradeDTO {
     @Nonnull LocalDate maturityDate;
     @Nullable LocalDate createdDate;
     @Nullable String expired;
-
-    public String tradeKey(){
-        return format("%d-%d",tradeId,version);
-    }
 }

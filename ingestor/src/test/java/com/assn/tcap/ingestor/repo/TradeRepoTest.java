@@ -3,7 +3,7 @@ package com.assn.tcap.ingestor.repo;
 import com.assn.tcap.ingestor.entity.Trade;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,7 +25,6 @@ class TradeRepoTest {
                 .maturityDate(LocalDate.now().plusDays(10))
                 .createdDate(LocalDate.now())
                 .expired("N")
-                .tradeKey(tradeId + "-" + version)
                 .build();
     }
 
@@ -38,7 +37,6 @@ class TradeRepoTest {
                 .maturityDate(maturityDate)
                 .createdDate(LocalDate.now())
                 .expired(expired)
-                .tradeKey(tradeId + "-" + version)
                 .build();
     }
 

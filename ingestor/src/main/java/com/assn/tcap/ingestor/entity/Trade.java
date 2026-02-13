@@ -6,7 +6,8 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "trades")
+@Table(name = "trades",
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"tradeId", "version"})})
 @Getter
 @Setter
 @AllArgsConstructor
@@ -38,7 +39,7 @@ public class Trade {
     @Column(nullable = false)
     private String expired;
 
-    @Column(name="trade_key", nullable = false)
-    private String tradeKey;
+    @Version
+    private Long rowVersion;
 
 }

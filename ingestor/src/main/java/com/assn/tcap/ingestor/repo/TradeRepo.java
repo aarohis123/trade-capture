@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -22,7 +23,7 @@ public interface TradeRepo extends JpaRepository<Trade, Long> {
            WHERE t2.tradeId = t.tradeId
        )
        """)
-    List<Trade> findLatestTradesByTradeIds(@Param("tradeIds") List<Long> tradeIds);
+    List<Trade> findLatestTradesByTradeIds(@Param("tradeIds") Collection<Long> tradeIds);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Trade t SET t.expired = 'Y' WHERE t.maturityDate < :today and t.expired = 'N'")
