@@ -1,9 +1,9 @@
 package com.assn.tcap.ingestor.service;
 
-import com.assn.tcap.ingestor.entity.Trade;
+import com.assn.tcap.ingestor.entity.TradeEntity;
 import com.assn.tcap.ingestor.model.RejectedTradeDTO;
 import com.assn.tcap.ingestor.model.TradeDTO;
-import com.assn.tcap.ingestor.repo.TradeRepo;
+import com.assn.tcap.ingestor.repo.TradeSQLRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,13 +19,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class TradeServiceTest {
+class TradeEntityServiceTest {
 
     @Mock
-    private TradeRepo tradeRepo;
+    private TradeSQLRepo tradeSQLRepo;
 
     @InjectMocks
-    private TradeService tradeService;
+    private SQLTradeService SQLTradeService;
 
     private LocalDate today;
 
@@ -42,13 +42,13 @@ class TradeServiceTest {
                 .build();
     }
 
-    private Trade buildExistingTrade(Long id, Long tradeId, Long version) {
-        Trade trade = new Trade();
-        trade.setId(id);
-        trade.setTradeId(tradeId);
-        trade.setVersion(version);
-        trade.setMaturityDate(LocalDate.of(2026,2,11));
-        return trade;
+    private TradeEntity buildExistingTrade(Long id, Long tradeId, Long version) {
+        TradeEntity tradeEntity = new TradeEntity();
+        tradeEntity.setId(id);
+        tradeEntity.setTradeId(tradeId);
+        tradeEntity.setVersion(version);
+        tradeEntity.setMaturityDate(LocalDate.of(2026,2,11));
+        return tradeEntity;
     }
 
     // ==============================
@@ -60,14 +60,14 @@ class TradeServiceTest {
 
         TradeDTO incoming = buildTrade(1L, 1L, today.plusDays(5));
 
-        when(tradeRepo.findLatestTradesByTradeIds(any()))
+        when(tradeSQLRepo.findLatestTradesByTradeIds(any()))
                 .thenReturn(Collections.emptyList());
 
         List<RejectedTradeDTO> rejected =
-                tradeService.processTrades(List.of(incoming));
+                SQLTradeService.processTrades(List.of(incoming));
 
         assertTrue(rejected.isEmpty());
-        verify(tradeRepo, times(1)).saveAll(any());
+        verify(tradeSQLRepo, times(1)).saveAll(any());
     }
 
     @Test
@@ -75,16 +75,16 @@ class TradeServiceTest {
 
         TradeDTO incoming = buildTrade(1L, 2L, today.plusDays(5));
 
-        Trade existing = buildExistingTrade(10L, 1L, 2L);
+        TradeEntity existing = buildExistingTrade(10L, 1L, 2L);
 
-        when(tradeRepo.findLatestTradesByTradeIds(any()))
+        when(tradeSQLRepo.findLatestTradesByTradeIds(any()))
                 .thenReturn(List.of(existing));
 
         List<RejectedTradeDTO> rejected =
-                tradeService.processTrades(List.of(incoming));
+                SQLTradeService.processTrades(List.of(incoming));
 
         assertTrue(rejected.isEmpty());
-        verify(tradeRepo, times(1)).saveAll(any());
+        verify(tradeSQLRepo, times(1)).saveAll(any());
     }
 
     @Test
@@ -93,14 +93,14 @@ class TradeServiceTest {
         TradeDTO trade1 = buildTrade(1L, 1L, today.plusDays(10));
         TradeDTO trade2 = buildTrade(2L, 1L, today.plusDays(20));
 
-        when(tradeRepo.findLatestTradesByTradeIds(any()))
+        when(tradeSQLRepo.findLatestTradesByTradeIds(any()))
                 .thenReturn(Collections.emptyList());
 
         List<RejectedTradeDTO> rejected =
-                tradeService.processTrades(List.of(trade1, trade2));
+                SQLTradeService.processTrades(List.of(trade1, trade2));
 
         assertTrue(rejected.isEmpty());
-        verify(tradeRepo, times(1)).saveAll(any());
+        verify(tradeSQLRepo, times(1)).saveAll(any());
     }
 
     // ==============================
@@ -112,17 +112,17 @@ class TradeServiceTest {
 
         TradeDTO incoming = buildTrade(1L, 1L, today.plusDays(5));
 
-        Trade existing = buildExistingTrade(10L, 1L, 5L);
+        TradeEntity existing = buildExistingTrade(10L, 1L, 5L);
 
-        when(tradeRepo.findLatestTradesByTradeIds(any()))
+        when(tradeSQLRepo.findLatestTradesByTradeIds(any()))
                 .thenReturn(List.of(existing));
 
         List<RejectedTradeDTO> rejected =
-                tradeService.processTrades(List.of(incoming));
+                SQLTradeService.processTrades(List.of(incoming));
 
         assertEquals(1, rejected.size());
         assertTrue(rejected.get(0).getReason().contains("Lower version"));
-        verify(tradeRepo).saveAll(Collections.emptyList());
+        verify(tradeSQLRepo).saveAll(Collections.emptyList());
     }
 
     @Test
@@ -131,35 +131,35 @@ class TradeServiceTest {
         TradeDTO incoming =
                 buildTrade(1L, 1L, today.minusDays(1));
 
-        when(tradeRepo.findLatestTradesByTradeIds(any()))
+        when(tradeSQLRepo.findLatestTradesByTradeIds(any()))
                 .thenReturn(Collections.emptyList());
 
         List<RejectedTradeDTO> rejected =
-                tradeService.processTrades(List.of(incoming));
+                SQLTradeService.processTrades(List.of(incoming));
 
         assertEquals(1, rejected.size());
         assertTrue(rejected.get(0).getReason().contains("Maturity date expired"));
-        verify(tradeRepo).saveAll(any());
+        verify(tradeSQLRepo).saveAll(any());
     }
 
     @Test
     void givenNullInput_whenProcessTrades_thenEmptyListIsReturned() {
 
         List<RejectedTradeDTO> rejected =
-                tradeService.processTrades(null);
+                SQLTradeService.processTrades(null);
 
         assertTrue(rejected.isEmpty());
-        verify(tradeRepo, never()).saveAll(any());
+        verify(tradeSQLRepo, never()).saveAll(any());
     }
 
     @Test
     void givenEmptyInput_whenProcessTrades_thenEmptyListIsReturned() {
 
         List<RejectedTradeDTO> rejected =
-                tradeService.processTrades(Collections.emptyList());
+                SQLTradeService.processTrades(Collections.emptyList());
 
         assertTrue(rejected.isEmpty());
-        verify(tradeRepo, never()).saveAll(any());
+        verify(tradeSQLRepo, never()).saveAll(any());
     }
 
     @Test
@@ -168,14 +168,14 @@ class TradeServiceTest {
         TradeDTO incoming =
                 buildTrade(1L, 1L, today.plusDays(5));
 
-        when(tradeRepo.findLatestTradesByTradeIds(any()))
+        when(tradeSQLRepo.findLatestTradesByTradeIds(any()))
                 .thenThrow(new RuntimeException("DB error"));
 
         assertThrows(RuntimeException.class, () ->
-                tradeService.processTrades(List.of(incoming))
+                SQLTradeService.processTrades(List.of(incoming))
         );
 
-        verify(tradeRepo, never()).saveAll(any());
+        verify(tradeSQLRepo, never()).saveAll(any());
     }
 
     // ==============================
@@ -185,12 +185,12 @@ class TradeServiceTest {
     @Test
     void givenExistingTrades_whenGetAllTrades_thenAllTradesAreReturned() {
 
-        Trade trade = buildExistingTrade(1L, 1L, 1L);
+        TradeEntity tradeEntity = buildExistingTrade(1L, 1L, 1L);
 
-        when(tradeRepo.findAll())
-                .thenReturn(List.of(trade));
+        when(tradeSQLRepo.findAll())
+                .thenReturn(List.of(tradeEntity));
 
-        List<TradeDTO> result = tradeService.getAllTrades();
+        List<TradeDTO> result = SQLTradeService.getAllTrades();
 
         assertEquals(1, result.size());
         assertEquals(1L, result.get(0).getTradeId());

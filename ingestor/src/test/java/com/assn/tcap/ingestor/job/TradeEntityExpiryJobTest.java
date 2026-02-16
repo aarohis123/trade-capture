@@ -1,6 +1,6 @@
 package com.assn.tcap.ingestor.job;
 
-import com.assn.tcap.ingestor.repo.TradeRepo;
+import com.assn.tcap.ingestor.repo.TradeSQLRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,10 +14,10 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class TradeExpiryJobTest {
+class TradeEntityExpiryJobTest {
 
     @Mock
-    private TradeRepo tradeRepo;
+    private TradeSQLRepo tradeSQLRepo;
 
     @InjectMocks
     private TradeExpiryJob tradeExpiryJob;
@@ -40,7 +40,7 @@ class TradeExpiryJobTest {
         ArgumentCaptor<LocalDate> dateCaptor =
                 ArgumentCaptor.forClass(LocalDate.class);
 
-        verify(tradeRepo, times(1))
+        verify(tradeSQLRepo, times(1))
                 .expireTrades(dateCaptor.capture());
 
         assertThat(dateCaptor.getValue())
@@ -56,7 +56,7 @@ class TradeExpiryJobTest {
     void givenRepositoryThrowsException_whenExpireTrades_thenExceptionPropagated() {
 
         doThrow(new RuntimeException("DB Error"))
-                .when(tradeRepo)
+                .when(tradeSQLRepo)
                 .expireTrades(any());
 
         try {
@@ -65,7 +65,7 @@ class TradeExpiryJobTest {
             assertThat(ex.getMessage()).isEqualTo("DB Error");
         }
 
-        verify(tradeRepo, times(1))
+        verify(tradeSQLRepo, times(1))
                 .expireTrades(any());
     }
 
@@ -77,12 +77,12 @@ class TradeExpiryJobTest {
     @DisplayName("Should still execute repository even if no trades to expire")
     void givenNoTradesEligible_whenExpireTrades_thenRepositoryStillCalled() {
 
-        when(tradeRepo.expireTrades(any()))
+        when(tradeSQLRepo.expireTrades(any()))
                 .thenReturn(0);
 
         tradeExpiryJob.expireTrades();
 
-        verify(tradeRepo, times(1))
+        verify(tradeSQLRepo, times(1))
                 .expireTrades(LocalDate.now());
     }
 }

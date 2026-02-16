@@ -1,5 +1,6 @@
 package com.assn.tcap.ingestor.entity;
 
+import com.assn.tcap.ingestor.model.TradeDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,7 +14,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Trade {
+public class TradeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -41,5 +42,17 @@ public class Trade {
 
     @Version
     private Long rowVersion;
+
+    public TradeDTO toDTO(){
+            return TradeDTO.builder()
+                    .tradeId(tradeId)
+                    .version(version)
+                    .bookId(bookId)
+                    .counterPartyId(counterPartyId)
+                    .maturityDate(maturityDate)
+                    .expired(expired)
+                    .build();
+
+    }
 
 }

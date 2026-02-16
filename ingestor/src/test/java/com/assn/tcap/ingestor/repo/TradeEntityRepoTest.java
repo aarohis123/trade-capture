@@ -1,6 +1,6 @@
 package com.assn.tcap.ingestor.repo;
 
-import com.assn.tcap.ingestor.entity.Trade;
+import com.assn.tcap.ingestor.entity.TradeEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -11,13 +11,13 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-class TradeRepoTest {
+class TradeEntityRepoTest {
 
     @Autowired
-    protected TradeRepo tradeRepo;
+    protected TradeSQLRepo tradeSQLRepo;
 
-    private Trade buildTrade(Long tradeId, Long version) {
-        return Trade.builder()
+    private TradeEntity buildTrade(Long tradeId, Long version) {
+        return TradeEntity.builder()
                 .tradeId(tradeId)
                 .version(version)
                 .counterPartyId("CP1")
@@ -28,8 +28,8 @@ class TradeRepoTest {
                 .build();
     }
 
-    private Trade buildTrade(Long tradeId, Long version,LocalDate maturityDate, String expired) {
-        return Trade.builder()
+    private TradeEntity buildTrade(Long tradeId, Long version, LocalDate maturityDate, String expired) {
+        return TradeEntity.builder()
                 .tradeId(tradeId)
                 .version(version)
                 .counterPartyId("CP1")
@@ -47,12 +47,12 @@ class TradeRepoTest {
     @Test
     void givenMultipleVersions_whenFindLatestTrades_thenOnlyMaxVersionReturned() {
 
-        tradeRepo.save(buildTrade(1L, 1L));
-        tradeRepo.save(buildTrade(1L, 2L));
-        tradeRepo.save(buildTrade(1L, 3L));
+        tradeSQLRepo.save(buildTrade(1L, 1L));
+        tradeSQLRepo.save(buildTrade(1L, 2L));
+        tradeSQLRepo.save(buildTrade(1L, 3L));
 
-        List<Trade> result =
-                tradeRepo.findLatestTradesByTradeIds(List.of(1L));
+        List<TradeEntity> result =
+                tradeSQLRepo.findLatestTradesByTradeIds(List.of(1L));
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getVersion()).isEqualTo(3L);
@@ -61,25 +61,25 @@ class TradeRepoTest {
     @Test
     void givenMultipleTradeIds_whenFindLatestTrades_thenReturnLatestForEach() {
 
-        tradeRepo.save(buildTrade(1L, 1L));
-        tradeRepo.save(buildTrade(1L, 2L));
-        tradeRepo.save(buildTrade(2L, 1L));
-        tradeRepo.save(buildTrade(2L, 5L));
+        tradeSQLRepo.save(buildTrade(1L, 1L));
+        tradeSQLRepo.save(buildTrade(1L, 2L));
+        tradeSQLRepo.save(buildTrade(2L, 1L));
+        tradeSQLRepo.save(buildTrade(2L, 5L));
 
-        List<Trade> result =
-                tradeRepo.findLatestTradesByTradeIds(List.of(1L, 2L));
+        List<TradeEntity> result =
+                tradeSQLRepo.findLatestTradesByTradeIds(List.of(1L, 2L));
 
         assertThat(result).hasSize(2);
         assertThat(result)
-                .extracting(Trade::getVersion)
+                .extracting(TradeEntity::getVersion)
                 .containsExactlyInAnyOrder(2L, 5L);
     }
 
     @Test
     void givenNonExistingTradeId_whenFindLatestTrades_thenReturnEmpty() {
 
-        List<Trade> result =
-                tradeRepo.findLatestTradesByTradeIds(List.of(999L));
+        List<TradeEntity> result =
+                tradeSQLRepo.findLatestTradesByTradeIds(List.of(999L));
 
         assertThat(result).isEmpty();
     }
@@ -87,8 +87,8 @@ class TradeRepoTest {
     @Test
     void givenEmptyList_whenFindLatestTrades_thenReturnEmpty() {
 
-        List<Trade> result =
-                tradeRepo.findLatestTradesByTradeIds(List.of());
+        List<TradeEntity> result =
+                tradeSQLRepo.findLatestTradesByTradeIds(List.of());
 
         assertThat(result).isEmpty();
     }
@@ -102,28 +102,28 @@ class TradeRepoTest {
     @Test
     void givenExpiredMaturityDates_whenExpireTrades_thenTradesMarkedExpired() throws Exception {
 
-        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(5), "N"));
-        tradeRepo.save(buildTrade(2L, 1L, LocalDate.now().plusDays(5), "N"));
-        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
+        tradeSQLRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(5), "N"));
+        tradeSQLRepo.save(buildTrade(2L, 1L, LocalDate.now().plusDays(5), "N"));
+        int updatedCount = tradeSQLRepo.expireTrades(LocalDate.now());
 
         assertThat(updatedCount).isEqualTo(1);
 
-        List<Trade> allTrades = tradeRepo.findAll();
+        List<TradeEntity> allTradeEntities = tradeSQLRepo.findAll();
 
-        Trade expiredTrade = allTrades.stream()
+        TradeEntity expiredTradeEntity = allTradeEntities.stream()
                 .filter(t -> t.getTradeId().equals(1L))
                 .findFirst()
                 .orElseThrow();
 
-        assertThat(expiredTrade.getExpired()).isEqualTo("Y");
+        assertThat(expiredTradeEntity.getExpired()).isEqualTo("Y");
     }
 
     @Test
     void givenAlreadyExpiredTrades_whenExpireTrades_thenDoNotUpdateAgain() {
 
-        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(5), "Y"));
+        tradeSQLRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(5), "Y"));
 
-        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
+        int updatedCount = tradeSQLRepo.expireTrades(LocalDate.now());
 
         assertThat(updatedCount).isZero();
     }
@@ -131,9 +131,9 @@ class TradeRepoTest {
     @Test
     void givenMaturityDateEqualsToday_whenExpireTrades_thenDoNotExpire() {
 
-        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now(), "N"));
+        tradeSQLRepo.save(buildTrade(1L, 1L, LocalDate.now(), "N"));
 
-        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
+        int updatedCount = tradeSQLRepo.expireTrades(LocalDate.now());
 
         assertThat(updatedCount).isZero();
     }
@@ -145,9 +145,9 @@ class TradeRepoTest {
     @Test
     void givenNoEligibleTrades_whenExpireTrades_thenReturnZero() {
 
-        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now().plusDays(10), "N"));
+        tradeSQLRepo.save(buildTrade(1L, 1L, LocalDate.now().plusDays(10), "N"));
 
-        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
+        int updatedCount = tradeSQLRepo.expireTrades(LocalDate.now());
 
         assertThat(updatedCount).isZero();
     }
@@ -155,11 +155,11 @@ class TradeRepoTest {
     @Test
     void givenMultipleExpiredTrades_whenExpireTrades_thenReturnCorrectUpdateCount() {
 
-        tradeRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(2), "N"));
-        tradeRepo.save(buildTrade(2L, 1L, LocalDate.now().minusDays(3), "N"));
-        tradeRepo.save(buildTrade(3L, 1L, LocalDate.now().plusDays(3), "N"));
+        tradeSQLRepo.save(buildTrade(1L, 1L, LocalDate.now().minusDays(2), "N"));
+        tradeSQLRepo.save(buildTrade(2L, 1L, LocalDate.now().minusDays(3), "N"));
+        tradeSQLRepo.save(buildTrade(3L, 1L, LocalDate.now().plusDays(3), "N"));
 
-        int updatedCount = tradeRepo.expireTrades(LocalDate.now());
+        int updatedCount = tradeSQLRepo.expireTrades(LocalDate.now());
 
         assertThat(updatedCount).isEqualTo(2);
     }
