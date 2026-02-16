@@ -6,29 +6,24 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
-import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.ContainerTestUtils;
-import org.springframework.test.annotation.DirtiesContext;
 
 import java.time.LocalDate;
-
-import static com.assn.tcap.ingestor.config.KafkaConfig.TOPIC_NAME;
-import static org.awaitility.Awaitility.await;
-
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static com.assn.tcap.ingestor.config.KafkaConfig.TOPIC_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @SpringBootTest(
         properties = {
                 "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
-                "spring.kafka.consumer.group-id=test-group",
+                "spring.kafka.consumer.group-id=test-group-sql",
                 "spring.kafka.consumer.auto-offset-reset=earliest",
                 "spring.kafka.consumer.enable-auto-commit=false",
                 "spring.kafka.listener.ack-mode=manual",
@@ -45,10 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 )@EmbeddedKafka(partitions = 2, topics = {TOPIC_NAME}, brokerProperties = {"listeners=PLAINTEXT://localhost:0", "port=0"})
 @Slf4j
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class TradeEntityConsumerIntegrationTest {
-
-    @Autowired
-    private ApplicationContext context;
+class SQLTradeConsumerIntegrationTest {
 
     @Autowired
     protected EmbeddedKafkaBroker embeddedKafkaBroker;
@@ -60,9 +52,7 @@ class TradeEntityConsumerIntegrationTest {
     protected KafkaTemplate<String, TradeDTO> kafkaTemplate;
 
     @Autowired
-    private TradeSQLRepo tradeSQLRepo;
-    @Autowired
-    private KafkaAdmin kafkaAdmin;
+    protected TradeSQLRepo tradeSQLRepo;
 
     @BeforeEach
     void setUp() {
