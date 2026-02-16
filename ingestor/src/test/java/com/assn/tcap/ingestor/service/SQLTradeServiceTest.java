@@ -19,13 +19,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class TradeEntityServiceTest {
+class SQLTradeServiceTest {
 
     @Mock
     private TradeSQLRepo tradeSQLRepo;
 
     @InjectMocks
-    private SQLTradeService SQLTradeService;
+    private SQLTradeService sqlTradeService;
 
     private LocalDate today;
 
@@ -64,7 +64,7 @@ class TradeEntityServiceTest {
                 .thenReturn(Collections.emptyList());
 
         List<RejectedTradeDTO> rejected =
-                SQLTradeService.processTrades(List.of(incoming));
+                sqlTradeService.processTrades(List.of(incoming));
 
         assertTrue(rejected.isEmpty());
         verify(tradeSQLRepo, times(1)).saveAll(any());
@@ -81,7 +81,7 @@ class TradeEntityServiceTest {
                 .thenReturn(List.of(existing));
 
         List<RejectedTradeDTO> rejected =
-                SQLTradeService.processTrades(List.of(incoming));
+                sqlTradeService.processTrades(List.of(incoming));
 
         assertTrue(rejected.isEmpty());
         verify(tradeSQLRepo, times(1)).saveAll(any());
@@ -97,7 +97,7 @@ class TradeEntityServiceTest {
                 .thenReturn(Collections.emptyList());
 
         List<RejectedTradeDTO> rejected =
-                SQLTradeService.processTrades(List.of(trade1, trade2));
+                sqlTradeService.processTrades(List.of(trade1, trade2));
 
         assertTrue(rejected.isEmpty());
         verify(tradeSQLRepo, times(1)).saveAll(any());
@@ -118,7 +118,7 @@ class TradeEntityServiceTest {
                 .thenReturn(List.of(existing));
 
         List<RejectedTradeDTO> rejected =
-                SQLTradeService.processTrades(List.of(incoming));
+                sqlTradeService.processTrades(List.of(incoming));
 
         assertEquals(1, rejected.size());
         assertTrue(rejected.get(0).getReason().contains("Lower version"));
@@ -135,7 +135,7 @@ class TradeEntityServiceTest {
                 .thenReturn(Collections.emptyList());
 
         List<RejectedTradeDTO> rejected =
-                SQLTradeService.processTrades(List.of(incoming));
+                sqlTradeService.processTrades(List.of(incoming));
 
         assertEquals(1, rejected.size());
         assertTrue(rejected.get(0).getReason().contains("Maturity date expired"));
@@ -146,7 +146,7 @@ class TradeEntityServiceTest {
     void givenNullInput_whenProcessTrades_thenEmptyListIsReturned() {
 
         List<RejectedTradeDTO> rejected =
-                SQLTradeService.processTrades(null);
+                sqlTradeService.processTrades(null);
 
         assertTrue(rejected.isEmpty());
         verify(tradeSQLRepo, never()).saveAll(any());
@@ -156,7 +156,7 @@ class TradeEntityServiceTest {
     void givenEmptyInput_whenProcessTrades_thenEmptyListIsReturned() {
 
         List<RejectedTradeDTO> rejected =
-                SQLTradeService.processTrades(Collections.emptyList());
+                sqlTradeService.processTrades(Collections.emptyList());
 
         assertTrue(rejected.isEmpty());
         verify(tradeSQLRepo, never()).saveAll(any());
@@ -172,7 +172,7 @@ class TradeEntityServiceTest {
                 .thenThrow(new RuntimeException("DB error"));
 
         assertThrows(RuntimeException.class, () ->
-                SQLTradeService.processTrades(List.of(incoming))
+                sqlTradeService.processTrades(List.of(incoming))
         );
 
         verify(tradeSQLRepo, never()).saveAll(any());
@@ -190,7 +190,7 @@ class TradeEntityServiceTest {
         when(tradeSQLRepo.findAll())
                 .thenReturn(List.of(tradeEntity));
 
-        List<TradeDTO> result = SQLTradeService.getAllTrades();
+        List<TradeDTO> result = sqlTradeService.getAllTrades();
 
         assertEquals(1, result.size());
         assertEquals(1L, result.get(0).getTradeId());
