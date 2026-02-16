@@ -1,0 +1,19 @@
+POST http://localhost:8080/sendTrades
+Content-Type: application/json
+
+[
+  {
+    "tradeId": 1,
+    "version": 1,
+    "counterPartyId": "CP1",
+    "bookId": "Book1",
+    "maturityDate": "2026-12-31"
+  },
+  {
+    "tradeId": 2,
+    "version": 1,
+    "counterPartyId": "CP2",
+    "bookId": "Book2",
+    "maturityDate": "2026-12-29"
+  }
+]

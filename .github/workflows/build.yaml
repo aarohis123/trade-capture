@@ -10,6 +10,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      security-events: write
+
+
     steps:
       # 1️⃣ Checkout
       - name: Checkout repository
@@ -24,10 +29,39 @@ jobs:
           cache: 'maven'
 
       # 3️⃣ Build All Modules from Parent
-      - name: Build all modules
-        run: mvn -B clean verify
+      - name: Build all modules and Verify
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: mvn -T 1C -B clean verify
 
-      # 4️⃣ Upload All Built JARs
+      # 4️⃣ Run Trivy (Filesystem Scan)
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      # 5️⃣ Upload JaCoCo Aggregate Report
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco-aggregate
+          if-no-files-found: ignore
+
+      # 6️⃣ Upload OWASP Report
+      - name: Upload Dependency Check Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.html
+          if-no-files-found: ignore
+
+      # 7 Upload All Built JARs
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:

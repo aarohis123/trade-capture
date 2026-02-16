@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.assn.tcap</groupId>
-    <artifactId>trade-capture</artifactId>
+    <artifactId>tradeEntity-capture</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
@@ -16,14 +16,26 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.2</version>
+        <version>3.5.10</version>
+        <relativePath/>
     </parent>
 
     <properties>
         <maven.compiler.source>23</maven.compiler.source>
         <maven.compiler.target>23</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot-version>4.0.2</spring-boot-version>
+        <spring-boot-version>3.5.10</spring-boot-version>
+        <spring-kafka-version>3.3.12</spring-kafka-version>
+        <lombok.version>1.18.42</lombok.version>
+        <modelmapper.version>3.2.6</modelmapper.version>
+        <modelmaper-module-record.version>1.0.1</modelmaper-module-record.version>
+        <jackson-databind-version>3.0.4</jackson-databind-version>
+        <h2.version>2.4.240</h2.version>
+        <mockito-junit-jupiter-version>5.21.0</mockito-junit-jupiter-version>
+        <jacoco-maven-plugin-version>0.8.14</jacoco-maven-plugin-version>
+        <owasp-dependency-check-maven-version>12.2.0</owasp-dependency-check-maven-version>
+        <spot-bug-version>4.9.8.2</spot-bug-version>
+        <checkstyle-plugin-version>3.6.0</checkstyle-plugin-version>
     </properties>
 
     <dependencyManagement>
@@ -35,6 +47,19 @@
                 <version>${spring-boot-version}</version>
             </dependency>
 
+            <!-- Spring Data JPA -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-jpa</artifactId>
+                <version>${spring-boot-version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-mongodb</artifactId>
+                <version>${spring-boot-version}</version>
+            </dependency>
+
             <!-- Actuator -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -42,12 +67,55 @@
                 <version>${spring-boot-version}</version>
             </dependency>
 
+            <!-- KAFKA -->
+            <dependency>
+                <groupId>org.springframework.kafka</groupId>
+                <artifactId>spring-kafka</artifactId>
+                <version>${spring-kafka-version}</version>
+            </dependency>
+
+            <!-- utilities -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.modelmapper</groupId>
+                <artifactId>modelmapper</artifactId>
+                <version>${modelmapper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.modelmapper</groupId>
+                <artifactId>modelmapper-module-record</artifactId>
+                <version>${modelmaper-module-record.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${h2.version}</version>
+            </dependency>
 
             <!-- Test -->
             <dependency>
+                <groupId>org.springframework.kafka</groupId>
+                <artifactId>spring-kafka-test</artifactId>
+                <version>${spring-kafka-version}</version>
+                <scope>test</scope>
+            </dependency>
+
+
+            <dependency>
                 <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-test</artifactId>
+                <artifactId>spring-boot-starter-data-jpa-test</artifactId>
                 <version>${spring-boot-version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito-junit-jupiter-version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -55,11 +123,92 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <!-- Spring Boot Plugin -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-maven-plugin-version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>${owasp-dependency-check-maven-version}</version>
+                <configuration>
+                    <format>HTML</format>
+                    <failBuildOnCVSS>8</failBuildOnCVSS>
+<!--                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>-->
+                    <nvdApiKey>19f564bd-ae3f-45a9-b4eb-392881ab2fd5</nvdApiKey>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spot-bug-version}</version>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+<!--            <plugin>-->
+<!--                <groupId>org.apache.maven.plugins</groupId>-->
+<!--                <artifactId>maven-checkstyle-plugin</artifactId>-->
+<!--                <version>${checkstyle-plugin-version}</version>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <phase>verify</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>check</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
+
         </plugins>
     </build>
 
